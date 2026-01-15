@@ -6,8 +6,8 @@ const KidsPointsApp = () => {
   const [currentActivity, setCurrentActivity] = useState(null);
   
   const [kids, setKids] = useState([
-    { id: 1, name: 'Emma', avatar: '👧', totalPoints: 45, earnedPoints: 120 },
-    { id: 2, name: 'Noah', avatar: '👦', totalPoints: 32, earnedPoints: 95 }
+    { id: 1, name: 'Kid 1', avatar: '👧', totalPoints: 0, earnedPoints: 0 },
+    { id: 2, name: 'Kid 2', avatar: '👦', totalPoints: 0, earnedPoints: 0 }
   ]);
 
   const [morningTasks, setMorningTasks] = useState([
