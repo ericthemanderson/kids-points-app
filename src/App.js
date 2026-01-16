@@ -60,8 +60,33 @@ const KidsPointsApp = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedKidForReward, setSelectedKidForReward] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [editingKidId, setEditingKidId] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingRewardId, setEditingRewardId] = useState(null);
+  const [appStateTime, setAppStateTime] = useState(null);
+  const [morningStartTime, setMorningStartTime] = useState(null);
+  const [bedtimeStartTime, setBedtimeStartTime] = useState(null);
 
-  const avatarOptions = ['👧', '👦', '👶', '🧒', '👨', '👩', '🧑', '👴', '👵'];
+  const avatarOptions = [
+    // Kids - various skin tones
+    '👶', '👶🏻', '👶🏼', '👶🏽', '👶🏾', '👶🏿',
+    '🧒', '🧒🏻', '🧒🏼', '🧒🏽', '🧒🏾', '🧒🏿',
+    '👦', '👦🏻', '👦🏼', '👦🏽', '👦🏾', '👦🏿',
+    '👧', '👧🏻', '👧🏼', '👧🏽', '👧🏾', '👧🏿',
+    // Adults - various skin tones
+    '👨', '👨🏻', '👨🏼', '👨🏽', '👨🏾', '👨🏿',
+    '👩', '👩🏻', '👩🏼', '👩🏽', '👩🏾', '👩🏿',
+    '🧑', '🧑🏻', '🧑🏼', '🧑🏽', '🧑🏾', '🧑🏿',
+    // Fun characters
+    '🦄', '🧜‍♀️', '🧜‍♂️', '🧚‍♀️', '🧚‍♂️', '🧙‍♀️', '🧙‍♂️',
+    '👸', '🤴', '🦸‍♀️', '🦸‍♂️', '🧑‍🚀', '👨‍🚀', '👩‍🚀',
+    '🤠', '👻', '🎅', '🧝‍♀️', '🧝‍♂️',
+    // Animals
+    '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯',
+    '🦁', '🐮', '🐷', '🐸', '🐵', '🦉', '🦆', '🐥', '🦄', '🐴',
+    '🦓', '🐺', '🦝', '🦘', '🐘', '🦒', '🦩', '🦚'
+  ];
 
   const badgeMilestones = [
     { points: 10, badge: '⭐' },
@@ -210,6 +235,37 @@ const KidsPointsApp = () => {
       listener.then(l => l.remove());
     };
   }, [currentActivity, settingsSection, currentTab]);
+
+  // Handle app going to background/foreground to keep timers running
+  useEffect(() => {
+    const handleAppStateChange = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) {
+        // App going to background - save current time
+        setAppStateTime(Date.now());
+      } else {
+        // App coming to foreground - calculate elapsed time
+        if (appStateTime) {
+          const elapsed = Date.now() - appStateTime;
+          
+          // Update morning timer if active
+          if (morningActive && morningStartTime) {
+            setMorningTime(prevTime => prevTime + elapsed);
+          }
+          
+          // Update bedtime timer if active
+          if (bedtimeActive && bedtimeStartTime) {
+            setBedtimeTime(prevTime => prevTime + elapsed);
+          }
+          
+          setAppStateTime(null);
+        }
+      }
+    });
+
+    return () => {
+      handleAppStateChange.then(l => l.remove());
+    };
+  }, [appStateTime, morningActive, bedtimeActive, morningStartTime, bedtimeStartTime]);
 
   useEffect(() => {
     if (morningActive) {
@@ -372,6 +428,7 @@ const KidsPointsApp = () => {
     setMorningCompleted({});
     setMorningLapTimes({});
     setMorningShowSummary(false);
+    setMorningStartTime(Date.now());
   };
 
   const resetMorningRoutine = () => {
@@ -380,6 +437,7 @@ const KidsPointsApp = () => {
     setMorningCompleted({});
     setMorningLapTimes({});
     setMorningShowSummary(false);
+    setMorningStartTime(null);
   };
 
   const calculateMorningSummary = () => {
@@ -437,6 +495,7 @@ const KidsPointsApp = () => {
     setBedtimeCompleted({});
     setBedtimeLapTimes({});
     setBedtimeShowSummary(false);
+    setBedtimeStartTime(Date.now());
   };
 
   const resetBedtimeRoutine = () => {
@@ -445,6 +504,7 @@ const KidsPointsApp = () => {
     setBedtimeCompleted({});
     setBedtimeLapTimes({});
     setBedtimeShowSummary(false);
+    setBedtimeStartTime(null);
   };
 
   const calculateBedtimeSummary = () => {
@@ -492,7 +552,7 @@ const KidsPointsApp = () => {
   );
 
   const DashboardPage = () => (
-    <div className="p-6 pb-24">
+    <div className="p-6 pb-24 pt-12">
       <div className="flex items-center justify-between mb-6">
         <h1 className={'text-3xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Kids Dashboard</h1>
         <button onClick={() => setDarkMode(!darkMode)} className={'p-3 rounded-lg ' + (darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700')}>
@@ -554,7 +614,7 @@ const KidsPointsApp = () => {
     const subTextClass = darkMode ? 'text-gray-400' : 'text-gray-600';
     
     return (
-      <div className="p-6 pb-24">
+      <div className="p-6 pb-24 pt-12">
         <h1 className={'text-3xl font-bold mb-6 ' + textClass}>Activities</h1>
         <div className="space-y-4">
           <button onClick={() => setCurrentActivity('morning')} className="w-full bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl shadow-lg p-8 border-2 border-yellow-200 hover:shadow-xl transition-shadow">
@@ -607,7 +667,7 @@ const KidsPointsApp = () => {
       const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
       
       return (
-        <div className="p-6 pb-24">
+        <div className="p-6 pb-24 pt-12">
           <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Morning Summary 🎉</h1>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
@@ -732,7 +792,7 @@ const KidsPointsApp = () => {
     }
 
     return (
-      <div className="p-6 pb-24">
+      <div className="p-6 pb-24 pt-12">
         <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Morning Routine 🌅</h1>
         <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
@@ -854,7 +914,7 @@ const KidsPointsApp = () => {
     };
 
     return (
-      <div className="p-6 pb-24">
+      <div className="p-6 pb-24 pt-12">
         <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Chores & Homework 🛏️</h1>
         <div className="bg-white rounded-xl shadow-lg p-4 mb-4 overflow-x-auto">
@@ -976,7 +1036,7 @@ const KidsPointsApp = () => {
       const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
       
       return (
-        <div className="p-6 pb-24">
+        <div className="p-6 pb-24 pt-12">
           <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Bedtime Summary 🎉</h1>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
@@ -1101,7 +1161,7 @@ const KidsPointsApp = () => {
     }
 
     return (
-      <div className="p-6 pb-24">
+      <div className="p-6 pb-24 pt-12">
         <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Bedtime Routine 🌙</h1>
         <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
@@ -1179,7 +1239,7 @@ const KidsPointsApp = () => {
   };
 
   const RewardsPage = () => (
-    <div className="p-6 pb-24">
+    <div className="p-6 pb-24 pt-12">
       <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Rewards</h1>
       <p className={'mb-4 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Spend your points on fun rewards!</p>
       <div className="space-y-3">
@@ -1329,7 +1389,7 @@ const KidsPointsApp = () => {
 
     if (settingsSection === 'main') {
       return (
-        <div className="p-6 pb-24">
+        <div className="p-6 pb-24 pt-12">
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Settings</h1>
           <div className="space-y-3">
             <button onClick={() => setSettingsSection('kids')} className={'w-full rounded-xl shadow-lg p-5 border-2 hover:shadow-xl transition-shadow text-left ' + (darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100')}>
@@ -1359,33 +1419,76 @@ const KidsPointsApp = () => {
 
     if (settingsSection === 'kids') {
       return (
-        <div className="p-6 pb-24">
-          <button onClick={() => setSettingsSection('main')} className="mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Manage Kids</h1>
           <div className="space-y-4 mb-6">
             {kids.map(kid => (
               <div key={kid.id} className={'rounded-xl shadow-lg p-5 border-2 ' + (darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100')}>
                 <div className="flex items-center gap-3">
-                  <select value={kid.avatar} onChange={(e) => setKids(kids.map(k => k.id === kid.id ? {...k, avatar: e.target.value} : k))} className={'text-4xl border-2 rounded-lg p-2 ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-transparent border-gray-200')}>
-                    {avatarOptions.map(av => (<option key={av} value={av}>{av}</option>))}
-                  </select>
-                  <input type="text" value={kid.name} onChange={(e) => setKids(kids.map(k => k.id === kid.id ? {...k, name: e.target.value} : k))} className={'flex-1 text-xl font-bold p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')} />
+                  <button
+                    onClick={() => {
+                      setEditingKidId(kid.id);
+                      setShowAvatarPicker(true);
+                    }}
+                    className={'text-5xl border-2 rounded-lg p-2 hover:bg-gray-100 ' + (darkMode ? 'bg-gray-700 border-gray-600' : 'bg-transparent border-gray-200')}
+                  >
+                    {kid.avatar}
+                  </button>
+                  <input
+                    type="text"
+                    defaultValue={kid.name}
+                    onBlur={(e) => setKids(kids.map(k => k.id === kid.id ? {...k, name: e.target.value} : k))}
+                    className={'flex-1 text-xl font-bold p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
+                  />
                   <button onClick={() => setKids(kids.filter(k => k.id !== kid.id))} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={24} /></button>
                 </div>
               </div>
             ))}
           </div>
           <button onClick={handleAddKid} className="w-full bg-blue-500 text-white rounded-xl p-4 font-bold hover:bg-blue-600 flex items-center justify-center gap-2">
-            <Plus size={24} />Add Kid
+            <Plus size={24} /> Add Kid
           </button>
+          
+          {showAvatarPicker && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className={'rounded-xl shadow-2xl p-6 max-w-2xl w-full max-h-96 overflow-y-auto ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
+                <h2 className={'text-xl font-bold mb-4 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Choose Avatar</h2>
+                <div className="grid grid-cols-8 gap-2 mb-4">
+                  {avatarOptions.map((avatar, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setKids(kids.map(k => k.id === editingKidId ? {...k, avatar} : k));
+                        setShowAvatarPicker(false);
+                        setEditingKidId(null);
+                      }}
+                      className={'text-4xl p-2 rounded-lg transition-colors ' + (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
+                    >
+                      {avatar}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAvatarPicker(false);
+                    setEditingKidId(null);
+                  }}
+                  className="w-full bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
 
     if (settingsSection === 'morning') {
       return (
-        <div className="p-6 pb-24">
-          <button onClick={() => setSettingsSection('main')} className="mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Morning Tasks</h1>
           <div className="space-y-2 mb-6">
             {morningTasks.map((task, idx) => (
@@ -1394,13 +1497,19 @@ const KidsPointsApp = () => {
                   <button onClick={() => { if (idx > 0) { const n = [...morningTasks]; [n[idx], n[idx - 1]] = [n[idx - 1], n[idx]]; setMorningTasks(n); }}} className={'p-1 rounded ' + (darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100')}><ChevronUp size={16} /></button>
                   <button onClick={() => { if (idx < morningTasks.length - 1) { const n = [...morningTasks]; [n[idx], n[idx + 1]] = [n[idx + 1], n[idx]]; setMorningTasks(n); }}} className={'p-1 rounded ' + (darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100')}><ChevronDown size={16} /></button>
                 </div>
-                <input type="text" value={task} onChange={(e) => { const n = [...morningTasks]; n[idx] = e.target.value; setMorningTasks(n); }} className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')} />
+                <input
+                  type="text"
+                  defaultValue={task}
+                  key={`morning-${idx}`}
+                  onBlur={(e) => { const n = [...morningTasks]; n[idx] = e.target.value; setMorningTasks(n); }}
+                  className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
+                />
                 <button onClick={() => setMorningTasks(morningTasks.filter((_, i) => i !== idx))} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={20} /></button>
               </div>
             ))}
           </div>
           <button onClick={() => setMorningTasks([...morningTasks, 'New Task'])} className="w-full bg-blue-500 text-white rounded-xl p-4 font-bold hover:bg-blue-600 flex items-center justify-center gap-2">
-            <Plus size={24} />Add Task
+            <Plus size={24} /> Add Task
           </button>
         </div>
       );
@@ -1408,13 +1517,19 @@ const KidsPointsApp = () => {
 
     if (settingsSection === 'chores') {
       return (
-        <div className="p-6 pb-24">
-          <button onClick={() => setSettingsSection('main')} className="mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Chores & Homework</h1>
           <div className="space-y-2 mb-6">
             {chores.map((chore) => (
               <div key={chore.id} className={'rounded-lg shadow p-3 flex items-center gap-2 ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
-                <input type="text" value={chore.name} onChange={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, name: e.target.value} : c))} className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')} />
+                <input
+                  type="text"
+                  defaultValue={chore.name}
+                  key={`chore-${chore.id}`}
+                  onBlur={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, name: e.target.value} : c))}
+                  className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
+                />
                 <select value={chore.points} onChange={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, points: parseInt(e.target.value)} : c))} className={'p-2 border-2 rounded-lg font-bold ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}>
                   {[1, 2, 3, 4, 5].map(p => (<option key={p} value={p}>{p} pts</option>))}
                 </select>
@@ -1423,7 +1538,7 @@ const KidsPointsApp = () => {
             ))}
           </div>
           <button onClick={() => { const newId = Math.max(...chores.map(c => c.id), 0) + 1; setChores([...chores, { id: newId, name: 'New Chore', points: 2 }]); }} className="w-full bg-blue-500 text-white rounded-xl p-4 font-bold hover:bg-blue-600 flex items-center justify-center gap-2">
-            <Plus size={24} />Add Chore
+            <Plus size={24} /> Add Chore
           </button>
         </div>
       );
@@ -1431,8 +1546,8 @@ const KidsPointsApp = () => {
 
     if (settingsSection === 'bedtime') {
       return (
-        <div className="p-6 pb-24">
-          <button onClick={() => setSettingsSection('main')} className="mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Bedtime Tasks</h1>
           <div className="space-y-2 mb-6">
             {bedtimeTasks.map((task, idx) => (
@@ -1441,13 +1556,19 @@ const KidsPointsApp = () => {
                   <button onClick={() => { if (idx > 0) { const n = [...bedtimeTasks]; [n[idx], n[idx - 1]] = [n[idx - 1], n[idx]]; setBedtimeTasks(n); }}} className={'p-1 rounded ' + (darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100')}><ChevronUp size={16} /></button>
                   <button onClick={() => { if (idx < bedtimeTasks.length - 1) { const n = [...bedtimeTasks]; [n[idx], n[idx + 1]] = [n[idx + 1], n[idx]]; setBedtimeTasks(n); }}} className={'p-1 rounded ' + (darkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-100')}><ChevronDown size={16} /></button>
                 </div>
-                <input type="text" value={task} onChange={(e) => { const n = [...bedtimeTasks]; n[idx] = e.target.value; setBedtimeTasks(n); }} className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')} />
+                <input
+                  type="text"
+                  defaultValue={task}
+                  key={`bedtime-${idx}`}
+                  onBlur={(e) => { const n = [...bedtimeTasks]; n[idx] = e.target.value; setBedtimeTasks(n); }}
+                  className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
+                />
                 <button onClick={() => setBedtimeTasks(bedtimeTasks.filter((_, i) => i !== idx))} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={20} /></button>
               </div>
             ))}
           </div>
           <button onClick={() => setBedtimeTasks([...bedtimeTasks, 'New Task'])} className="w-full bg-blue-500 text-white rounded-xl p-4 font-bold hover:bg-blue-600 flex items-center justify-center gap-2">
-            <Plus size={24} />Add Task
+            <Plus size={24} /> Add Task
           </button>
         </div>
       );
@@ -1455,8 +1576,8 @@ const KidsPointsApp = () => {
 
     if (settingsSection === 'rewards') {
       return (
-        <div className="p-6 pb-24">
-          <button onClick={() => setSettingsSection('main')} className="mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Manage Rewards</h1>
           <div className="space-y-3 mb-6">
             {rewards.map(reward => (
@@ -1464,20 +1585,23 @@ const KidsPointsApp = () => {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <label className={'text-sm font-semibold ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>Icon:</label>
-                    <select 
-                      value={reward.icon} 
-                      onChange={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, icon: e.target.value} : r))} 
-                      className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-200') + ' text-3xl p-2 border-2 rounded-lg'}
+                    <button
+                      onClick={() => {
+                        setEditingRewardId(reward.id);
+                        setShowEmojiPicker(true);
+                      }}
+                      className={(darkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'bg-white border-gray-200 hover:bg-gray-100') + ' text-4xl p-2 border-2 rounded-lg'}
                     >
-                      {emojiOptions.map(emoji => (<option key={emoji} value={emoji}>{emoji}</option>))}
-                    </select>
+                      {reward.icon}
+                    </button>
                   </div>
                   <div>
                     <label className={'text-sm font-semibold block mb-1 ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>Name:</label>
                     <input 
                       type="text" 
-                      value={reward.name} 
-                      onChange={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, name: e.target.value} : r))} 
+                      defaultValue={reward.name}
+                      key={`reward-name-${reward.id}`}
+                      onBlur={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, name: e.target.value} : r))} 
                       className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-200 text-gray-800') + ' w-full p-2 border-2 rounded-lg font-bold'}
                     />
                   </div>
@@ -1485,8 +1609,9 @@ const KidsPointsApp = () => {
                     <label className={'text-sm font-semibold block mb-1 ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>Description:</label>
                     <input 
                       type="text" 
-                      value={reward.description} 
-                      onChange={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, description: e.target.value} : r))} 
+                      defaultValue={reward.description}
+                      key={`reward-desc-${reward.id}`}
+                      onBlur={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, description: e.target.value} : r))} 
                       className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-200 text-gray-800') + ' w-full p-2 border-2 rounded-lg'}
                     />
                   </div>
@@ -1519,8 +1644,40 @@ const KidsPointsApp = () => {
             }} 
             className="w-full bg-blue-500 text-white rounded-xl p-4 font-bold hover:bg-blue-600 flex items-center justify-center gap-2"
           >
-            <Plus size={24} />Add Reward
+            <Plus size={24} /> Add Reward
           </button>
+          
+          {showEmojiPicker && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className={'rounded-xl shadow-2xl p-6 max-w-2xl w-full max-h-96 overflow-y-auto ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
+                <h2 className={'text-xl font-bold mb-4 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Choose Icon</h2>
+                <div className="grid grid-cols-8 gap-2 mb-4">
+                  {emojiOptions.map((emoji, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setRewards(rewards.map(r => r.id === editingRewardId ? {...r, icon: emoji} : r));
+                        setShowEmojiPicker(false);
+                        setEditingRewardId(null);
+                      }}
+                      className={'text-3xl p-2 rounded-lg transition-colors ' + (darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100')}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEmojiPicker(false);
+                    setEditingRewardId(null);
+                  }}
+                  className="w-full bg-gray-300 text-gray-800 py-2 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
