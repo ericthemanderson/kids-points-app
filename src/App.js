@@ -30,7 +30,9 @@ const KidsPointsApp = () => {
     { id: 2, name: 'Book Reading', icon: '📚', description: '30 min reading time', cost: 10, enabled: true },
     { id: 3, name: 'Screen Time', icon: '📱', description: '30 min device time', cost: 15, enabled: true },
     { id: 4, name: 'Video Game Time', icon: '🎮', description: '30 min gaming', cost: 20, enabled: true },
-    { id: 5, name: 'Story Time', icon: '📖', description: 'Extra bedtime story', cost: 8, enabled: true }
+    { id: 5, name: 'Story Time', icon: '📖', description: 'Extra bedtime story', cost: 8, enabled: true },
+    { id: 6, name: 'Candy', icon: '🍬', description: 'A piece of candy', cost: 5, enabled: true },
+    { id: 7, name: 'Money', icon: '💵', description: '$1 cash', cost: 10, enabled: true }
   ]);
 
   const emojiOptions = ['📚', '📱', '🎮', '📖', '🍦', '🎨', '🎬', '🎵', '⚽', '🏀', '🎾', '🏈', '🎯', '🎪', '🎭', '🎸', '🎹', '🎤', '🎧', '🎮', '🕹️', '🎲', '🧩', '🪀', '🎳', '🏓', '🥊', '🥋', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤸', '⛹️', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚴', '🚵', '🤹', '🍕', '🍔', '🍟', '🌭', '🍿', '🧁', '🍰', '🎂', '🍪', '🍩', '🍫', '🍬', '🍭', '🧃', '🥤', '🍹', '🍨', '🧊', '🎈', '🎉', '🎊', '🎁', '🏆', '🥇', '🥈', '🥉', '⭐', '🌟', '💫', '✨', '🔥', '💎', '👑', '🎯'];
@@ -404,10 +406,11 @@ const KidsPointsApp = () => {
     const key = kidId + '-' + taskIdx;
     if (morningCompleted[key]) return;
 
+    // Find the most recently completed task for this kid (highest absoluteTime)
     let lastTime = 0;
-    for (let i = 0; i < taskIdx; i++) {
+    for (let i = 0; i < morningTasks.length; i++) {
       const prevKey = kidId + '-' + i;
-      if (morningLapTimes[prevKey]) {
+      if (morningLapTimes[prevKey] && morningLapTimes[prevKey].absoluteTime > lastTime) {
         lastTime = morningLapTimes[prevKey].absoluteTime;
       }
     }
@@ -471,10 +474,11 @@ const KidsPointsApp = () => {
     const key = kidId + '-' + taskIdx;
     if (bedtimeCompleted[key]) return;
 
+    // Find the most recently completed task for this kid (highest absoluteTime)
     let lastTime = 0;
-    for (let i = 0; i < taskIdx; i++) {
+    for (let i = 0; i < bedtimeTasks.length; i++) {
       const prevKey = kidId + '-' + i;
-      if (bedtimeLapTimes[prevKey]) {
+      if (bedtimeLapTimes[prevKey] && bedtimeLapTimes[prevKey].absoluteTime > lastTime) {
         lastTime = bedtimeLapTimes[prevKey].absoluteTime;
       }
     }
@@ -539,14 +543,14 @@ const KidsPointsApp = () => {
       <button onClick={() => setCurrentTab('dashboard')} className={'flex flex-col items-center p-2 rounded-lg ' + (currentTab === 'dashboard' ? (darkMode ? 'text-blue-400 bg-gray-700' : 'text-blue-600 bg-blue-50') : (darkMode ? 'text-gray-400' : 'text-gray-600'))}>
         <Home size={24} /><span className="text-xs mt-1">Kids</span>
       </button>
-      <button onClick={() => setCurrentTab('activities')} className={'flex flex-col items-center p-2 rounded-lg ' + (currentTab === 'activities' ? (darkMode ? 'text-blue-400 bg-gray-700' : 'text-blue-600 bg-blue-50') : (darkMode ? 'text-gray-400' : 'text-gray-600'))}>
-        <CheckSquare size={24} /><span className="text-xs mt-1">Activities</span>
-      </button>
       <button onClick={() => setCurrentTab('rewards')} className={'flex flex-col items-center p-2 rounded-lg ' + (currentTab === 'rewards' ? (darkMode ? 'text-blue-400 bg-gray-700' : 'text-blue-600 bg-blue-50') : (darkMode ? 'text-gray-400' : 'text-gray-600'))}>
         <Award size={24} /><span className="text-xs mt-1">Rewards</span>
       </button>
+      <button onClick={() => setCurrentTab('activities')} className={'flex flex-col items-center p-2 rounded-lg ' + (currentTab === 'activities' ? (darkMode ? 'text-blue-400 bg-gray-700' : 'text-blue-600 bg-blue-50') : (darkMode ? 'text-gray-400' : 'text-gray-600'))}>
+        <CheckSquare size={24} /><span className="text-xs mt-1">Tasks</span>
+      </button>
       <button onClick={() => setCurrentTab('settings')} className={'flex flex-col items-center p-2 rounded-lg ' + (currentTab === 'settings' ? (darkMode ? 'text-blue-400 bg-gray-700' : 'text-blue-600 bg-blue-50') : (darkMode ? 'text-gray-400' : 'text-gray-600'))}>
-        <Settings size={24} /><span className="text-xs mt-1">Settings</span>
+        <Settings size={24} /><span className="text-xs mt-1">Parent</span>
       </button>
     </div>
   );
@@ -1396,6 +1400,10 @@ const KidsPointsApp = () => {
               <h3 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>👨‍👩‍👧‍👦 Manage Kids</h3>
               <p className={'text-sm mt-1 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Add, remove, or edit kids names and avatars</p>
             </button>
+            <button onClick={() => setSettingsSection('adjustpoints')} className={'w-full rounded-xl shadow-lg p-5 border-2 hover:shadow-xl transition-shadow text-left ' + (darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100')}>
+              <h3 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>➕➖ Adjust Points</h3>
+              <p className={'text-sm mt-1 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Manually add or remove points</p>
+            </button>
             <button onClick={() => setSettingsSection('morning')} className={'w-full rounded-xl shadow-lg p-5 border-2 hover:shadow-xl transition-shadow text-left ' + (darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100')}>
               <h3 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>🌅 Morning Tasks</h3>
               <p className={'text-sm mt-1 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Edit morning routine tasks</p>
@@ -1481,6 +1489,56 @@ const KidsPointsApp = () => {
               </div>
             </div>
           )}
+        </div>
+      );
+    }
+
+    if (settingsSection === 'adjustpoints') {
+      return (
+        <div className="p-6 pb-24 pt-12">
+          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Adjust Points</h1>
+          <div className="space-y-4">
+            {kids.map(kid => (
+              <div key={kid.id} className={'rounded-xl shadow-lg p-5 border-2 ' + (darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100')}>
+                <div className="flex items-center mb-4">
+                  <span className="text-5xl mr-4">{kid.avatar}</span>
+                  <div>
+                    <h3 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>{kid.name}</h3>
+                    <p className={'text-sm ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Current: <span className="font-bold text-green-600">{kid.totalPoints}</span> points</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setKids(kids.map(k => k.id === kid.id ? {...k, totalPoints: k.totalPoints - 1, earnedPoints: Math.max(0, k.earnedPoints - 1)} : k))}
+                    className="flex-1 bg-red-500 text-white py-3 rounded-lg font-bold hover:bg-red-600 flex items-center justify-center gap-2"
+                  >
+                    ➖ Remove 1
+                  </button>
+                  <button
+                    onClick={() => setKids(kids.map(k => k.id === kid.id ? {...k, totalPoints: k.totalPoints + 1, earnedPoints: k.earnedPoints + 1} : k))}
+                    className="flex-1 bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 flex items-center justify-center gap-2"
+                  >
+                    ➕ Add 1
+                  </button>
+                </div>
+                <div className="flex gap-3 mt-2">
+                  <button
+                    onClick={() => setKids(kids.map(k => k.id === kid.id ? {...k, totalPoints: k.totalPoints - 5, earnedPoints: Math.max(0, k.earnedPoints - 5)} : k))}
+                    className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700"
+                  >
+                    ➖ 5
+                  </button>
+                  <button
+                    onClick={() => setKids(kids.map(k => k.id === kid.id ? {...k, totalPoints: k.totalPoints + 5, earnedPoints: k.earnedPoints + 5} : k))}
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"
+                  >
+                    ➕ 5
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       );
     }
