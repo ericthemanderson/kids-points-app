@@ -34,6 +34,10 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
       
+      - name: Make gradlew executable
+        working-directory: ./android
+        run: chmod +x gradlew
+      
       - name: Build Android App Bundle (AAB)
         working-directory: ./android
         run: ./gradlew bundleRelease
@@ -53,7 +57,9 @@ jobs:
       
       - name: Also build APK for testing
         working-directory: ./android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
       
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
