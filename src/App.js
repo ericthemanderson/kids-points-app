@@ -69,6 +69,16 @@ const KidsPointsApp = () => {
   const [appStateTime, setAppStateTime] = useState(null);
   const [morningStartTime, setMorningStartTime] = useState(null);
   const [bedtimeStartTime, setBedtimeStartTime] = useState(null);
+  
+  // Countdown timer settings
+  const [morningUseCountdown, setMorningUseCountdown] = useState(false);
+  const [morningCountdownMinutes, setMorningCountdownMinutes] = useState(15);
+  const [bedtimeUseCountdown, setBedtimeUseCountdown] = useState(false);
+  const [bedtimeCountdownMinutes, setBedtimeCountdownMinutes] = useState(20);
+  
+  // Instructions page state
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
 
   const avatarOptions = [
     // Kids - various skin tones
@@ -150,6 +160,10 @@ const KidsPointsApp = () => {
         const savedBedtimeHistory = localStorage.getItem('bedtimeHistory');
         const savedChoresHistory = localStorage.getItem('choresHistory');
         const savedDarkMode = localStorage.getItem('darkMode');
+        const savedMorningUseCountdown = localStorage.getItem('morningUseCountdown');
+        const savedMorningCountdownMinutes = localStorage.getItem('morningCountdownMinutes');
+        const savedBedtimeUseCountdown = localStorage.getItem('bedtimeUseCountdown');
+        const savedBedtimeCountdownMinutes = localStorage.getItem('bedtimeCountdownMinutes');
 
         if (savedKids) setKids(JSON.parse(savedKids));
         if (savedMorningTasks) setMorningTasks(JSON.parse(savedMorningTasks));
@@ -161,6 +175,10 @@ const KidsPointsApp = () => {
         if (savedBedtimeHistory) setBedtimeHistory(JSON.parse(savedBedtimeHistory));
         if (savedChoresHistory) setChoresHistory(JSON.parse(savedChoresHistory));
         if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode));
+        if (savedMorningUseCountdown) setMorningUseCountdown(JSON.parse(savedMorningUseCountdown));
+        if (savedMorningCountdownMinutes) setMorningCountdownMinutes(JSON.parse(savedMorningCountdownMinutes));
+        if (savedBedtimeUseCountdown) setBedtimeUseCountdown(JSON.parse(savedBedtimeUseCountdown));
+        if (savedBedtimeCountdownMinutes) setBedtimeCountdownMinutes(JSON.parse(savedBedtimeCountdownMinutes));
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -209,6 +227,22 @@ const KidsPointsApp = () => {
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('morningUseCountdown', JSON.stringify(morningUseCountdown));
+  }, [morningUseCountdown]);
+
+  useEffect(() => {
+    localStorage.setItem('morningCountdownMinutes', JSON.stringify(morningCountdownMinutes));
+  }, [morningCountdownMinutes]);
+
+  useEffect(() => {
+    localStorage.setItem('bedtimeUseCountdown', JSON.stringify(bedtimeUseCountdown));
+  }, [bedtimeUseCountdown]);
+
+  useEffect(() => {
+    localStorage.setItem('bedtimeCountdownMinutes', JSON.stringify(bedtimeCountdownMinutes));
+  }, [bedtimeCountdownMinutes]);
 
   // Android back button handler
   useEffect(() => {
@@ -446,9 +480,11 @@ const KidsPointsApp = () => {
   const calculateMorningSummary = () => {
     const kidTimes = {};
     const taskWinners = {};
+    const countdownLimit = morningCountdownMinutes * 60 * 1000;
 
     kids.forEach(kid => {
       let totalTime = 0;
+      let completedAll = true;
       morningTasks.forEach((task, idx) => {
         const key = kid.id + '-' + idx;
         if (morningLapTimes[key]) {
@@ -456,9 +492,17 @@ const KidsPointsApp = () => {
           if (!taskWinners[idx] || morningLapTimes[key].lapTime < taskWinners[idx].time) {
             taskWinners[idx] = { kidId: kid.id, time: morningLapTimes[key].lapTime };
           }
+        } else {
+          completedAll = false;
         }
       });
-      kidTimes[kid.id] = totalTime;
+      
+      // In countdown mode, if kid went over time or didn't complete all, they get disqualified
+      if (morningUseCountdown && (totalTime > countdownLimit || !completedAll)) {
+        kidTimes[kid.id] = Infinity; // Disqualified
+      } else {
+        kidTimes[kid.id] = totalTime;
+      }
     });
 
     const fastestKid = Object.entries(kidTimes).reduce((min, entry) => {
@@ -467,7 +511,10 @@ const KidsPointsApp = () => {
       return time < min.time ? { kidId: parseInt(kidId), time } : min;
     }, { kidId: null, time: Infinity });
 
-    return { kidTimes, taskWinners, fastestKid };
+    // Count how many kids qualified
+    const qualifiedKids = Object.values(kidTimes).filter(time => time !== Infinity).length;
+
+    return { kidTimes, taskWinners, fastestKid, qualifiedKids };
   };
 
   const handleBedtimeTaskClick = (kidId, taskIdx) => {
@@ -514,9 +561,11 @@ const KidsPointsApp = () => {
   const calculateBedtimeSummary = () => {
     const kidTimes = {};
     const taskWinners = {};
+    const countdownLimit = bedtimeCountdownMinutes * 60 * 1000;
 
     kids.forEach(kid => {
       let totalTime = 0;
+      let completedAll = true;
       bedtimeTasks.forEach((task, idx) => {
         const key = kid.id + '-' + idx;
         if (bedtimeLapTimes[key]) {
@@ -524,9 +573,17 @@ const KidsPointsApp = () => {
           if (!taskWinners[idx] || bedtimeLapTimes[key].lapTime < taskWinners[idx].time) {
             taskWinners[idx] = { kidId: kid.id, time: bedtimeLapTimes[key].lapTime };
           }
+        } else {
+          completedAll = false;
         }
       });
-      kidTimes[kid.id] = totalTime;
+      
+      // In countdown mode, if kid went over time or didn't complete all, they get disqualified
+      if (bedtimeUseCountdown && (totalTime > countdownLimit || !completedAll)) {
+        kidTimes[kid.id] = Infinity; // Disqualified
+      } else {
+        kidTimes[kid.id] = totalTime;
+      }
     });
 
     const fastestKid = Object.entries(kidTimes).reduce((min, entry) => {
@@ -535,7 +592,10 @@ const KidsPointsApp = () => {
       return time < min.time ? { kidId: parseInt(kidId), time } : min;
     }, { kidId: null, time: Infinity });
 
-    return { kidTimes, taskWinners, fastestKid };
+    // Count how many kids qualified
+    const qualifiedKids = Object.values(kidTimes).filter(time => time !== Infinity).length;
+
+    return { kidTimes, taskWinners, fastestKid, qualifiedKids };
   };
 
   const TabBar = () => (
@@ -559,9 +619,17 @@ const KidsPointsApp = () => {
     <div className="p-6 pb-24 pt-12">
       <div className="flex items-center justify-between mb-6">
         <h1 className={'text-3xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Kids Dashboard</h1>
-        <button onClick={() => setDarkMode(!darkMode)} className={'p-3 rounded-lg ' + (darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700')}>
-          {darkMode ? '☀️' : '🌙'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowInstructions(true)} 
+            className={'p-3 rounded-lg font-bold text-lg ' + (darkMode ? 'bg-gray-700 text-blue-400' : 'bg-blue-100 text-blue-600')}
+          >
+            ?
+          </button>
+          <button onClick={() => setDarkMode(!darkMode)} className={'p-3 rounded-lg ' + (darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700')}>
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
       <div className="space-y-4">
         {kids.map(kid => {
@@ -675,17 +743,48 @@ const KidsPointsApp = () => {
           <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Morning Summary 🎉</h1>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Overall Winner</h2>
-            {kids.map(kid => kid.id === summary.fastestKid.kidId && (
-              <div key={kid.id} className="flex items-center gap-4 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
-                <div className="text-5xl">{kid.avatar}</div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">{kid.name}</h3>
-                  <p className="text-gray-600">Finished in {formatTime(summary.kidTimes[kid.id])}</p>
-                  <p className="text-green-600 font-bold">+1 Point! 🏆</p>
-                </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              {morningUseCountdown ? 'Results (Countdown Mode)' : 'Overall Winner'}
+            </h2>
+            {morningUseCountdown ? (
+              <div className="space-y-3">
+                {kids.map(kid => {
+                  const kidTime = summary.kidTimes[kid.id];
+                  const isQualified = kidTime !== Infinity;
+                  const isWinner = kid.id === summary.fastestKid.kidId;
+                  
+                  return (
+                    <div key={kid.id} className={'flex items-center gap-4 p-4 rounded-lg border-2 ' + (isQualified ? (isWinner ? 'bg-yellow-50 border-yellow-300' : 'bg-green-50 border-green-200') : 'bg-red-50 border-red-200')}>
+                      <div className="text-4xl">{kid.avatar}</div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800">{kid.name}</h3>
+                        {isQualified ? (
+                          <>
+                            <p className="text-gray-600">Finished in {formatTime(kidTime)}</p>
+                            <p className={'font-bold ' + (isWinner ? 'text-green-600' : 'text-blue-600')}>
+                              {isWinner ? `+${Math.ceil(kids.length / summary.qualifiedKids)} Points! 🏆` : `+${Math.floor(kids.length / summary.qualifiedKids)} Points`}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-red-600 font-bold">Over time - No points ❌</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            ) : (
+              kids.map(kid => kid.id === summary.fastestKid.kidId && (
+                <div key={kid.id} className="flex items-center gap-4 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
+                  <div className="text-5xl">{kid.avatar}</div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">{kid.name}</h3>
+                    <p className="text-gray-600">Finished in {formatTime(summary.kidTimes[kid.id])}</p>
+                    <p className="text-green-600 font-bold">+1 Point! 🏆</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Task Winners</h2>
@@ -801,8 +900,22 @@ const KidsPointsApp = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Morning Routine 🌅</h1>
         <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
           <div className="text-center mb-4">
-            <div className="text-5xl font-bold text-blue-600 mb-4">{formatTime(morningTime)}</div>
-            <div className="flex gap-2 justify-center">
+            {morningUseCountdown ? (
+              <>
+                <div className={'text-5xl font-bold mb-2 ' + (morningTime > morningCountdownMinutes * 60 * 1000 ? 'text-red-600' : 'text-blue-600')}>
+                  {formatTime(Math.max(0, morningCountdownMinutes * 60 * 1000 - morningTime))}
+                </div>
+                <p className="text-sm text-gray-600">
+                  {morningTime > morningCountdownMinutes * 60 * 1000 ? '⏰ Time\'s up!' : `⏱️ ${morningCountdownMinutes} min countdown`}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-5xl font-bold text-blue-600 mb-2">{formatTime(morningTime)}</div>
+                <p className="text-sm text-gray-600">⏱️ Stopwatch mode</p>
+              </>
+            )}
+            <div className="flex gap-2 justify-center mt-4">
               {!morningActive && morningTime === 0 && (
                 <button onClick={startMorningRoutine} className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-600 flex items-center gap-2">
                   <Play size={20} />Start
@@ -1044,17 +1157,48 @@ const KidsPointsApp = () => {
           <button onClick={() => setCurrentActivity(null)} className="mb-4 text-blue-600 font-semibold">← Back to Activities</button>
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Bedtime Summary 🎉</h1>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Overall Winner</h2>
-            {kids.map(kid => kid.id === summary.fastestKid.kidId && (
-              <div key={kid.id} className="flex items-center gap-4 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
-                <div className="text-5xl">{kid.avatar}</div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800">{kid.name}</h3>
-                  <p className="text-gray-600">Finished in {formatTime(summary.kidTimes[kid.id])}</p>
-                  <p className="text-green-600 font-bold">+1 Point! 🏆</p>
-                </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              {bedtimeUseCountdown ? 'Results (Countdown Mode)' : 'Overall Winner'}
+            </h2>
+            {bedtimeUseCountdown ? (
+              <div className="space-y-3">
+                {kids.map(kid => {
+                  const kidTime = summary.kidTimes[kid.id];
+                  const isQualified = kidTime !== Infinity;
+                  const isWinner = kid.id === summary.fastestKid.kidId;
+                  
+                  return (
+                    <div key={kid.id} className={'flex items-center gap-4 p-4 rounded-lg border-2 ' + (isQualified ? (isWinner ? 'bg-yellow-50 border-yellow-300' : 'bg-green-50 border-green-200') : 'bg-red-50 border-red-200')}>
+                      <div className="text-4xl">{kid.avatar}</div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800">{kid.name}</h3>
+                        {isQualified ? (
+                          <>
+                            <p className="text-gray-600">Finished in {formatTime(kidTime)}</p>
+                            <p className={'font-bold ' + (isWinner ? 'text-green-600' : 'text-blue-600')}>
+                              {isWinner ? `+${Math.ceil(kids.length / summary.qualifiedKids)} Points! 🏆` : `+${Math.floor(kids.length / summary.qualifiedKids)} Points`}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-red-600 font-bold">Over time - No points ❌</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            ) : (
+              kids.map(kid => kid.id === summary.fastestKid.kidId && (
+                <div key={kid.id} className="flex items-center gap-4 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
+                  <div className="text-5xl">{kid.avatar}</div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">{kid.name}</h3>
+                    <p className="text-gray-600">Finished in {formatTime(summary.kidTimes[kid.id])}</p>
+                    <p className="text-green-600 font-bold">+1 Point! 🏆</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Task Winners</h2>
@@ -1170,8 +1314,22 @@ const KidsPointsApp = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Bedtime Routine 🌙</h1>
         <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
           <div className="text-center mb-4">
-            <div className="text-5xl font-bold text-blue-600 mb-4">{formatTime(bedtimeTime)}</div>
-            <div className="flex gap-2 justify-center">
+            {bedtimeUseCountdown ? (
+              <>
+                <div className={'text-5xl font-bold mb-2 ' + (bedtimeTime > bedtimeCountdownMinutes * 60 * 1000 ? 'text-red-600' : 'text-blue-600')}>
+                  {formatTime(Math.max(0, bedtimeCountdownMinutes * 60 * 1000 - bedtimeTime))}
+                </div>
+                <p className="text-sm text-gray-600">
+                  {bedtimeTime > bedtimeCountdownMinutes * 60 * 1000 ? '⏰ Time\'s up!' : `⏱️ ${bedtimeCountdownMinutes} min countdown`}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-5xl font-bold text-blue-600 mb-2">{formatTime(bedtimeTime)}</div>
+                <p className="text-sm text-gray-600">⏱️ Stopwatch mode</p>
+              </>
+            )}
+            <div className="flex gap-2 justify-center mt-4">
               {!bedtimeActive && bedtimeTime === 0 && (
                 <button onClick={startBedtimeRoutine} className="bg-green-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-600 flex items-center gap-2">
                   <Play size={20} />Start
@@ -1428,7 +1586,7 @@ const KidsPointsApp = () => {
     if (settingsSection === 'kids') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Manage Kids</h1>
           <div className="space-y-4 mb-6">
             {kids.map(kid => (
@@ -1496,7 +1654,7 @@ const KidsPointsApp = () => {
     if (settingsSection === 'adjustpoints') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Adjust Points</h1>
           <div className="space-y-4">
             {kids.map(kid => (
@@ -1546,8 +1704,44 @@ const KidsPointsApp = () => {
     if (settingsSection === 'morning') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Morning Tasks</h1>
+          
+          {/* Countdown Timer Settings */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2 mb-6'}>
+            <h2 className={'text-lg font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>⏱️ Timer Mode</h2>
+            <label className="flex items-center gap-3 mb-3">
+              <input 
+                type="checkbox" 
+                checked={morningUseCountdown}
+                onChange={(e) => setMorningUseCountdown(e.target.checked)}
+                className="w-5 h-5" 
+              />
+              <span className={'font-semibold ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>
+                Use countdown timer
+              </span>
+            </label>
+            {morningUseCountdown && (
+              <div className="flex items-center gap-3">
+                <label className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>Time limit:</label>
+                <input 
+                  type="number"
+                  value={morningCountdownMinutes}
+                  onChange={(e) => setMorningCountdownMinutes(parseInt(e.target.value) || 15)}
+                  className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200') + ' w-20 px-3 py-2 border-2 rounded-lg font-bold'}
+                  min="1"
+                  max="60"
+                />
+                <span className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>minutes</span>
+              </div>
+            )}
+            <p className={'text-sm mt-3 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>
+              {morningUseCountdown 
+                ? '⏱️ Countdown: Kids must finish before time runs out or get 0 points!'
+                : '⏱️ Stopwatch: Tracks speed, fastest kids earn bonus points'}
+            </p>
+          </div>
+          
           <div className="space-y-2 mb-6">
             {morningTasks.map((task, idx) => (
               <div key={idx} className={'rounded-lg shadow p-3 flex items-center gap-2 ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
@@ -1576,7 +1770,7 @@ const KidsPointsApp = () => {
     if (settingsSection === 'chores') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Chores & Homework</h1>
           <div className="space-y-2 mb-6">
             {chores.map((chore) => (
@@ -1605,8 +1799,44 @@ const KidsPointsApp = () => {
     if (settingsSection === 'bedtime') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Bedtime Tasks</h1>
+          
+          {/* Countdown Timer Settings */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2 mb-6'}>
+            <h2 className={'text-lg font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>⏱️ Timer Mode</h2>
+            <label className="flex items-center gap-3 mb-3">
+              <input 
+                type="checkbox" 
+                checked={bedtimeUseCountdown}
+                onChange={(e) => setBedtimeUseCountdown(e.target.checked)}
+                className="w-5 h-5" 
+              />
+              <span className={'font-semibold ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>
+                Use countdown timer
+              </span>
+            </label>
+            {bedtimeUseCountdown && (
+              <div className="flex items-center gap-3">
+                <label className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>Time limit:</label>
+                <input 
+                  type="number"
+                  value={bedtimeCountdownMinutes}
+                  onChange={(e) => setBedtimeCountdownMinutes(parseInt(e.target.value) || 20)}
+                  className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200') + ' w-20 px-3 py-2 border-2 rounded-lg font-bold'}
+                  min="1"
+                  max="60"
+                />
+                <span className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>minutes</span>
+              </div>
+            )}
+            <p className={'text-sm mt-3 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>
+              {bedtimeUseCountdown 
+                ? '⏱️ Countdown: Kids must finish before time runs out or get 0 points!'
+                : '⏱️ Stopwatch: Tracks speed, fastest kids earn bonus points'}
+            </p>
+          </div>
+          
           <div className="space-y-2 mb-6">
             {bedtimeTasks.map((task, idx) => (
               <div key={idx} className={'rounded-lg shadow p-3 flex items-center gap-2 ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
@@ -1635,7 +1865,7 @@ const KidsPointsApp = () => {
     if (settingsSection === 'rewards') {
       return (
         <div className="p-6 pb-24 pt-12">
-          <button onClick={() => setSettingsSection('main')} className="mt-8 mb-4 text-blue-600 font-semibold">← Back to Settings</button>
+          <button onClick={() => setSettingsSection('main')} className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}>← Back</button>
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Manage Rewards</h1>
           <div className="space-y-3 mb-6">
             {rewards.map(reward => (
@@ -1739,8 +1969,248 @@ const KidsPointsApp = () => {
         </div>
       );
     }
+  }; // End of SettingsPage
+
+  const InstructionsPage = () => {
+    const toggleSection = (section) => {
+      setExpandedSections(prev => ({
+        ...prev,
+        [section]: !prev[section]
+      }));
+    };
+
+    return (
+      <div className="p-6 pb-24 pt-12">
+        <button 
+          onClick={() => setShowInstructions(false)} 
+          className={(darkMode ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800') + ' px-4 py-2 rounded-lg mb-6 font-semibold'}
+        >
+          ← Back
+        </button>
+        
+        <h1 className={'text-3xl font-bold mb-2 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+          📚 Parent Guide
+        </h1>
+        <p className={'text-sm mb-6 ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>
+          Everything you need to know about using the Kids Points Tracker
+        </p>
+
+        <div className="space-y-3">
+          {/* Overview */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <h2 className={'text-xl font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+              📱 Overview
+            </h2>
+            <p className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>
+              The Kids Points Tracker helps motivate your children through a fun, gamified points system. Kids earn points by completing morning routines, bedtime routines, and chores, then spend those points on rewards you choose.
+            </p>
+          </div>
+
+          {/* Main Tabs */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <button 
+              onClick={() => toggleSection('tabs')}
+              className="w-full flex items-center justify-between"
+            >
+              <h2 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                🏠 Main Tabs
+              </h2>
+              <span className="text-2xl">{expandedSections['tabs'] ? '▼' : '▶'}</span>
+            </button>
+            
+            {expandedSections['tabs'] && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Kids Dashboard</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Shows each child's current points, badges, and progress toward the next badge.
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Rewards</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Kids can redeem rewards by spending their points.
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Tasks</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Shows Morning Routine, Chores & Homework, and Bedtime Routine activities.
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Parent Dashboard</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Your control center for managing everything!
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Routines */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <button 
+              onClick={() => toggleSection('routines')}
+              className="w-full flex items-center justify-between"
+            >
+              <h2 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                🌅 Morning & Bedtime Routines
+              </h2>
+              <span className="text-2xl">{expandedSections['routines'] ? '▼' : '▶'}</span>
+            </button>
+            
+            {expandedSections['routines'] && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Stopwatch Mode (Default)</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Tracks how fast each child completes tasks. Fastest child and fastest tasks earn bonus points!
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Countdown Timer Mode</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Set a time limit (e.g., "be ready in 15 minutes"). Kids who finish in time earn points. Those over time get nothing!
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Points Awarded</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    • Fastest overall: +1 bonus point<br/>
+                    • Fastest per task: +1 bonus point each<br/>
+                    • Countdown mode: Only kids who finish in time get points
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Tips</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    • Use stopwatch mode for casual mornings<br/>
+                    • Use countdown timer when you're in a hurry<br/>
+                    • Set realistic time limits<br/>
+                    • Celebrate improvements!
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chores */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <h2 className={'text-xl font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+              🛏️ Chores & Homework
+            </h2>
+            <p className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>
+              Tap a chore when completed to award points immediately. Points are added instantly!
+            </p>
+          </div>
+
+          {/* Rewards Tips */}
+          <div className={(darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <button 
+              onClick={() => toggleSection('rewards')}
+              className="w-full flex items-center justify-between"
+            >
+              <h2 className={'text-xl font-bold ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                🎁 Reward Ideas & Tips
+              </h2>
+              <span className="text-2xl">{expandedSections['rewards'] ? '▼' : '▶'}</span>
+            </button>
+            
+            {expandedSections['rewards'] && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Time-Based</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Screen time (10-15 pts), Video games (15-20 pts), Extra story (8-10 pts)
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Tangible</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Candy (5 pts), Money (10-50 pts), Small toy (20-30 pts)
+                  </p>
+                </div>
+                <div>
+                  <h3 className={'font-bold mb-1 ' + (darkMode ? 'text-blue-400' : 'text-blue-600')}>Experience</h3>
+                  <p className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                    Pick dinner (15 pts), Choose movie (10 pts), Park visit (20 pts)
+                  </p>
+                </div>
+                <div className={(darkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200') + ' p-3 rounded-lg border-2 mt-3'}>
+                  <p className={'text-sm font-semibold ' + (darkMode ? 'text-blue-300' : 'text-blue-800')}>
+                    💡 Tip: Mix quick wins with big goals to maintain motivation!
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pro Tips */}
+          <div className={(darkMode ? 'bg-gradient-to-r from-purple-900 to-blue-900 border-purple-700' : 'bg-gradient-to-r from-purple-100 to-blue-100 border-purple-200') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <h2 className={'text-xl font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+              💡 Pro Tips
+            </h2>
+            <ul className="space-y-2">
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                ✓ Use countdown timers when you're in a hurry
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                ✓ Let kids help choose rewards they want
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                ✓ Celebrate effort and improvement
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                ✓ Be consistent with routines
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                ✓ Review and adjust point values monthly
+              </li>
+            </ul>
+          </div>
+
+          {/* Quick Start */}
+          <div className={(darkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200') + ' rounded-xl shadow-lg p-5 border-2'}>
+            <h2 className={'text-xl font-bold mb-3 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+              🎯 Quick Start Checklist
+            </h2>
+            <ul className="space-y-2">
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Add your kids with fun avatars
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Customize morning & bedtime tasks
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Create rewards your kids want
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Do a practice run
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Adjust costs based on first week
+              </li>
+              <li className={(darkMode ? 'text-gray-300' : 'text-gray-700') + ' text-sm'}>
+                □ Be consistent for 2+ weeks
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   };
 
+  // Show instructions if requested
+  if (showInstructions) {
+    return (
+      <div className={'min-h-screen ' + (darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-blue-50 to-purple-50')}>
+        <InstructionsPage />
+      </div>
+    );
+  }
+
+  // Main app return
   return (
     <div className={'min-h-screen ' + (darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-blue-50 to-purple-50')}>
       {currentTab === 'dashboard' && <DashboardPage />}
