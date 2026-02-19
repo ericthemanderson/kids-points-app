@@ -1724,14 +1724,21 @@ const KidsPointsApp = () => {
             {morningUseCountdown && (
               <div className="flex items-center gap-3">
                 <label className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>Time limit:</label>
-                <input 
-                  type="number"
-                  value={morningCountdownMinutes}
-                  onChange={(e) => setMorningCountdownMinutes(parseInt(e.target.value) || 15)}
-                  className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200') + ' w-20 px-3 py-2 border-2 rounded-lg font-bold'}
-                  min="1"
-                  max="60"
-                />
+                <button
+                  onClick={() => setMorningCountdownMinutes(Math.max(1, morningCountdownMinutes - 1))}
+                  className={(darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600') + ' text-white px-3 py-2 rounded-lg font-bold'}
+                >
+                  ➖
+                </button>
+                <span className={'font-bold text-xl min-w-[3rem] text-center ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                  {morningCountdownMinutes}
+                </span>
+                <button
+                  onClick={() => setMorningCountdownMinutes(morningCountdownMinutes + 1)}
+                  className={(darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600') + ' text-white px-3 py-2 rounded-lg font-bold'}
+                >
+                  ➕
+                </button>
                 <span className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>minutes</span>
               </div>
             )}
@@ -1774,18 +1781,33 @@ const KidsPointsApp = () => {
           <h1 className={'text-3xl font-bold mb-6 ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>Chores & Homework</h1>
           <div className="space-y-2 mb-6">
             {chores.map((chore) => (
-              <div key={chore.id} className={'rounded-lg shadow p-3 flex items-center gap-2 ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
-                <input
-                  type="text"
-                  defaultValue={chore.name}
-                  key={`chore-${chore.id}`}
-                  onBlur={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, name: e.target.value} : c))}
-                  className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
-                />
-                <select value={chore.points} onChange={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, points: parseInt(e.target.value)} : c))} className={'p-2 border-2 rounded-lg font-bold ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}>
-                  {[1, 2, 3, 4, 5].map(p => (<option key={p} value={p}>{p} pts</option>))}
-                </select>
-                <button onClick={() => setChores(chores.filter(c => c.id !== chore.id))} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={20} /></button>
+              <div key={chore.id} className={'rounded-lg shadow p-3 ' + (darkMode ? 'bg-gray-800' : 'bg-white')}>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="text"
+                    defaultValue={chore.name}
+                    key={`chore-${chore.id}`}
+                    onBlur={(e) => setChores(chores.map(c => c.id === chore.id ? {...c, name: e.target.value} : c))}
+                    className={'flex-1 p-2 border-2 rounded-lg ' + (darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'border-gray-200')}
+                  />
+                  <button onClick={() => setChores(chores.filter(c => c.id !== chore.id))} className="p-2 text-red-500 hover:bg-red-50 rounded"><Trash2 size={20} /></button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={'text-sm font-semibold ' + (darkMode ? 'text-gray-400' : 'text-gray-600')}>Points:</span>
+                  <button
+                    onClick={() => setChores(chores.map(c => c.id === chore.id ? {...c, points: Math.max(1, c.points - 1)} : c))}
+                    className={(darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600') + ' text-white px-3 py-1 rounded font-bold'}
+                  >
+                    ➖
+                  </button>
+                  <span className={'font-bold text-lg min-w-[3rem] text-center ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>{chore.points}</span>
+                  <button
+                    onClick={() => setChores(chores.map(c => c.id === chore.id ? {...c, points: c.points + 1} : c))}
+                    className={(darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600') + ' text-white px-3 py-1 rounded font-bold'}
+                  >
+                    ➕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1819,14 +1841,21 @@ const KidsPointsApp = () => {
             {bedtimeUseCountdown && (
               <div className="flex items-center gap-3">
                 <label className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>Time limit:</label>
-                <input 
-                  type="number"
-                  value={bedtimeCountdownMinutes}
-                  onChange={(e) => setBedtimeCountdownMinutes(parseInt(e.target.value) || 20)}
-                  className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-200') + ' w-20 px-3 py-2 border-2 rounded-lg font-bold'}
-                  min="1"
-                  max="60"
-                />
+                <button
+                  onClick={() => setBedtimeCountdownMinutes(Math.max(1, bedtimeCountdownMinutes - 1))}
+                  className={(darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600') + ' text-white px-3 py-2 rounded-lg font-bold'}
+                >
+                  ➖
+                </button>
+                <span className={'font-bold text-xl min-w-[3rem] text-center ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                  {bedtimeCountdownMinutes}
+                </span>
+                <button
+                  onClick={() => setBedtimeCountdownMinutes(bedtimeCountdownMinutes + 1)}
+                  className={(darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600') + ' text-white px-3 py-2 rounded-lg font-bold'}
+                >
+                  ➕
+                </button>
                 <span className={(darkMode ? 'text-gray-300' : 'text-gray-700')}>minutes</span>
               </div>
             )}
@@ -1904,13 +1933,30 @@ const KidsPointsApp = () => {
                     />
                   </div>
                   <div>
-                    <label className={'text-sm font-semibold block mb-1 ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>Point Cost:</label>
-                    <input 
-                      type="number" 
-                      value={reward.cost} 
-                      onChange={(e) => setRewards(rewards.map(r => r.id === reward.id ? {...r, cost: parseInt(e.target.value) || 0} : r))} 
-                      className={(darkMode ? 'bg-gray-700 border-gray-600 text-gray-200' : 'bg-white border-gray-200 text-gray-800') + ' w-full p-2 border-2 rounded-lg font-bold'}
-                    />
+                    <label className={'text-sm font-semibold block mb-2 ' + (darkMode ? 'text-gray-300' : 'text-gray-700')}>Point Cost:</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setRewards(rewards.map(r => r.id === reward.id ? {...r, cost: Math.max(1, r.cost - 1)} : r))}
+                        className={(darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600') + ' text-white px-4 py-2 rounded-lg font-bold'}
+                      >
+                        ➖
+                      </button>
+                      <span className={'font-bold text-2xl min-w-[4rem] text-center ' + (darkMode ? 'text-gray-100' : 'text-gray-800')}>
+                        {reward.cost}
+                      </span>
+                      <button
+                        onClick={() => setRewards(rewards.map(r => r.id === reward.id ? {...r, cost: r.cost + 1} : r))}
+                        className={(darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600') + ' text-white px-4 py-2 rounded-lg font-bold'}
+                      >
+                        ➕
+                      </button>
+                      <button
+                        onClick={() => setRewards(rewards.map(r => r.id === reward.id ? {...r, cost: r.cost + 5} : r))}
+                        className={(darkMode ? 'bg-green-700 hover:bg-green-800' : 'bg-green-600 hover:bg-green-700') + ' text-white px-3 py-2 rounded-lg font-semibold text-sm'}
+                      >
+                        +5
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-gray-300">
                     <label className="flex items-center gap-2">

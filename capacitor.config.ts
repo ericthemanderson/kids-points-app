@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.ericanderson.kidspointstracker',
-  appName: 'kids-points-app',
+  appName: 'Kid Points',
   webDir: 'build',
   plugins: {
     App: {
